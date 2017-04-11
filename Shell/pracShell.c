@@ -15,6 +15,7 @@ int main(void)
     char buf[1024];
     char *sargv[16];
     int fd[2];
+    char printThis[1024];
 
     int i = 0;
     int forc = 0;
@@ -49,22 +50,22 @@ int main(void)
                 close(fd[1]);
 
                 sargv[0] = strtok(buf, " ");
-                printf("sargv[0]\n");
+                printf("sargv[0] : %s\n", sargv[0]);
 
                 while(sargv[i++] != NULL)
                 {
                     sargv[i] = strtok(NULL, " ");
                 }
 
+                sargv[i] = "\n";
+
                 execvp(sargv[0], sargv);
                 perror("Fucked up\n");
                 exit(-1);
             default:
-                wait(NULL);
-                char printThis[4096];
                 read(fd[0], &printThis, sizeof(printThis));
-
                 write(STDOUT_FILENO, &printThis, sizeof(printThis));
+                wait(NULL);
                 close(fd[1]);
                 close(fd[0]);
                 fclose(stream);
