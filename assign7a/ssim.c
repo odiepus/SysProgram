@@ -8,12 +8,35 @@
 
 
 
-void createFamilia(int children)
+int *rando(int x, int i)
+{
+    srand(5972261 * i);
+    int rng = RAND_MAX / 10;
+    rng *= 10;
+    int n, j, num;
+
+    int randoNums[x + 2];
+    for (n = 0; n < x+2; n++)
+    {
+        do{
+            num = rand();
+            j = num % 10;
+            randoNums[n] = j;
+        }
+        while(num >= rng || i == j);
+    }
+
+        return randoNums;
+}
+
+
+int main(void)
 {
     int id =0;
     int i = 0;
-
+    int children = 3;
     int numOfFd = 0;
+
     numOfFd = children * 2;
     int loopThisTimes = children;
 
@@ -26,19 +49,17 @@ void createFamilia(int children)
         pipe(fd + 2);
     }
 
-    j = children;
-
-    while (loopThisTimes)
+    while (loopThisTimes !=0)
     {
-        if(id != 0) break;
-
         switch(fork())
         {
             case -1:
                 perror("fork failed\n");
                 exit(-1);
             case 0:
-                id = i;                                 //give this process an id
+
+                sleep(3);
+                id = ++i;                                 //give this process an id
 
                 close(fd[(id * 2) + 1]);                //close this process write to its own pipe
 
@@ -51,9 +72,11 @@ void createFamilia(int children)
                     }
                 }
 
+                loopThisTimes = 0;
+
                 break;
             default:
-                if (j == children)          //earlier i made children == to j for this if
+                if (id == 0 && i == 0)          //earlier i made children == to j for this if
                 {                       //I did this so i can close parents appropriate
                     close(fd[1]);       //fd's only once while in the loop
                     int k = 2;
@@ -61,39 +84,27 @@ void createFamilia(int children)
                     {
                         close(fd[k]);
                     }
+                    i++;
+                    loopThisTimes--;
+                }else if(id == 0)
+                {
+                    i++;
+                    loopThisTimes--;
                 }
-                j = 0;
-                i++;
-                loopThisTimes--;
                 break;
         }
     }
 
-    int rng = RAND_MAX/10;
-    rng *=10;
-    int n = 0;
-    int l = 0;
-    int num = 0;
+    printf("id : %d ==== i : %d\n", id, i);
 
-    for(; n < children + 2; n++)
+    int *k = rando(children, id); int h = 0;
+    for(; h < sizeof(k); h++)
     {
-        do{
-            num = rand();
-            l = num%10;
-        }
-        while(num >= rng || i == l);
-        fprintf(stdout, "%d\n", l);
+        //finsisht this shit asap
+        printf("id = %d  == send to : %d", id, k[h]);
     }
-
-
-
-}
-
-
-int main(void)
-{
-    createFamilia(4);
 
 
     return 0;
 }
+
