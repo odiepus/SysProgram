@@ -7,27 +7,35 @@
 
 
 
+
 int main(void)
 {
+	struct mesg {
+		char string[100];
+		int id;
+	}sendMesg, receiveMesg;
+
 	int id = 0;
 	int i = 0;
-	 int children = 1;
+	int children = 10;
 	const int writeCount = children + 2;
 	int fd[10][2];
 
-	int loopThisTimes = children;
 
-	int j = 0;
-	for (; j < children; j++)
+	int loopThisTimes = children - 1;
+
+	int m = 0;
+	for (; m < children; m++)
 	{
-		if (pipe(fd[j]) == -1)
+		if (pipe(fd[m]) == -1)
 		{
 			perror("Pipe Broke");
 			exit(-1);
 		}
 	}
 
-	while (loopThisTimes != 0)
+	int j = 0;
+	for (; j < children - 1; j++)
 	{
 		switch (fork())
 		{
@@ -36,48 +44,30 @@ int main(void)
 			exit(-1);
 
 		case 0:
+			sleep(3);
 			id = ++i;
+			
+			j = 100;
 			break;
 		default:
 			if (id == 0 && i == 0)
 			{
+				
 				i++;
 				loopThisTimes--;
-			}
-			else if (id != 0)
-			{
-				loopThisTimes = 0;
 			}
 			else
 			{
 				i++;
-				loopThisTimes--;
 			}
 		}
 	}
 
-	close(fd[id][1]); //close this process's write fd to itself
-
-					  //close all of this process's read pipes excluding its indexed [id][0] reader
-	int h = 0;
-	for (; h < writeCount; h++)
-	{
-		if (id != i)
-		{
-			close(fd[id][0]);
-		}
-	}
-	
-	char mesg[] = { 'p', 'r', 'o', 'c', 'e', 's', 's', '0' };
-	int len = strlen(mesg);
-
-	if (id != 0)
-	{
-		mesg[len - 1] = id;
-	}
+	strcpy(sendMesg.string, "process");
+	sendMesg.id = id;
 
 	//rng fd numbers to write to
-	srand(5972261 * i);
+	srand(5972261 * id);
 	int rng = RAND_MAX / children;
 	rng *= children;
 	int n, e = 0, num = 0;
@@ -87,41 +77,50 @@ int main(void)
 	{
 		do {
 			num = rand();
-			e = num % 10;
-			randoNums[n] = e;
+			e = num % children;
+			
 		} while (num >= rng || id == e);
+		randoNums[n] = e;
 	}
 
+
+
 	int k = 0;
-	for (; k < writeCount; k++)
+	for (; k < n; k++)
 	{
-		if (k != id)
+		if (write(fd[randoNums[k]][1], &sendMesg, sizeof(sendMesg)) == -1)
 		{
-			if (randoNums[n] == k)
-			{
-				if (write(fd[k][1], &mesg, sizeof(mesg)) == -1)
-				{
-					perror("write");
-				}
-			}
+			perror("write");
 		}
 	}
 
-	char readBuf[256];
-	int readSize = 1;
-	while (readSize != -1)
+	int b = 0;
+	for (; b < children; b++)
 	{
-		readSize = read(fd[id][0], &readBuf, sizeof(readBuf));
-		printf("process%d has recieved a message from %s\n", id, readBuf);
+		close(fd[b][1]);
 	}
 
 
 
+	char readBuf[256];
+	int readSize = 0;
+	while ((readSize = read(fd[id][0], &receiveMesg, sizeof(receiveMesg))) > 0)
+	{
+		printf("process%d has recieved a message from %s%d\n", id, receiveMesg.string, receiveMesg.id);
+	}
 
+	if (readSize == -1)
+	{
+		perror("read");
+	}
 
+	int l = 0;
+	for (; l < children; l++)
+	{
+		close(fd[l][0]);
+	}
 
-
-
+	close(fd[id][0]);
 
 	return 0;
 }
