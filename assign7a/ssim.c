@@ -8,46 +8,24 @@
 
 
 
-int *rando(int x, int i)
-{
-    srand(5972261 * i);
-    int rng = RAND_MAX / 10;
-    rng *= 10;
-    int n, j, num;
-
-    int randoNums[x + 2];
-    for (n = 0; n < x+2; n++)
-    {
-        do{
-            num = rand();
-            j = num % 10;
-            randoNums[n] = j;
-        }
-        while(num >= rng || i == j);
-    }
-
-        return randoNums;
-}
-
-
 int main(void)
 {
     int id =0;
     int i = 0;
-    int children = 3;
+    int children = 1;
     int numOfFd = 0;
 
     numOfFd = children * 2;
     int loopThisTimes = children;
 
-    int fd[numOfFd];
+    int fd[2];
     pipe(fd);
 
     int j = 1;
     for(; j < children; j++)
-    {
-        pipe(fd + 2);
-    }
+   {
+       pipe(fd + 2*j);
+   }
 
     while (loopThisTimes !=0)
     {
@@ -58,31 +36,32 @@ int main(void)
                 exit(-1);
             case 0:
 
-                sleep(3);
                 id = ++i;                                 //give this process an id
 
-                close(fd[(id * 2) + 1]);                //close this process write to its own pipe
-
                 int k = 0;
-                for(; k < numOfFd; k+=2)                //close this process reads from other pipes
+                for(; k < numOfFd; k++)                //close this process reads from other pipes
                 {
-                    if (k != 2 * id)
+                    if (2*k != id)
                     {
-                        close(fd[k]);
+                        close(fd[2*k]);
                     }
                 }
-
+                write(fd[1], "FUKKK", 5);
                 loopThisTimes = 0;
 
                 break;
             default:
                 if (id == 0 && i == 0)          //earlier i made children == to j for this if
-                {                       //I did this so i can close parents appropriate
-                    close(fd[1]);       //fd's only once while in the loop
-                    int k = 2;
-                    for(; k < numOfFd; k+=2)    //close reads from other pipes
+                {                               //I did this so i can close parents appropriate
+
+                    close(STDIN_FILENO);
+                    int k = 0;
+                    for(; k < numOfFd; k+=2)                //close this process reads from other pipes
                     {
-                        close(fd[k]);
+                        if (k != id)
+                        {
+                            close(fd[k]);
+                        }
                     }
                     i++;
                     loopThisTimes--;
@@ -95,14 +74,69 @@ int main(void)
         }
     }
 
-    printf("id : %d ==== i : %d\n", id, i);
 
-    int *k = rando(children, id); int h = 0;
-    for(; h < sizeof(k); h++)
+    printf("stdout works!!!%d\n", id);
+
+    srand(5972261 * i);
+    int rng = RAND_MAX / children;
+    rng *= children;
+    int n, e = 0, num = 0;
+
+    int randoNums[children + 2];
+    for (n = 0; n < children+2; n++)
     {
-        //finsisht this shit asap
-        printf("id = %d  == send to : %d", id, k[h]);
+        do{
+            num = rand();
+            e = num % 10;
+            randoNums[n] = e;
+        }
+        while(num >= rng || id == e);
     }
+
+
+
+    char mesg[] = {'p', 'r', 'o', 'c', 'e', 's', 's', '0'};
+
+    size_t len = strlen(mesg);
+
+    if (id != 0)
+    {
+        mesg[len-1] = id;
+    }
+    printf("%s\n", mesg);
+
+    int v = 0;
+    for(; v < 12; v++)
+    {
+        if (randoNums[v] == (2*v) + 1 && randoNums[v] != (2*id) + 1)
+        {
+                printf("process %d||writing to fd[%d]\n", id, (2*v) + 1);
+            if(write(fd[(2*v) + 1], &mesg, len) == -1)
+            {
+                perror("write to PIPE error");
+                exit(-1);
+            }
+        }
+    }
+
+    if(id == 0){
+        write(fd[3], &mesg, len);
+    }
+
+
+    char readBuf[256];
+
+    if(id == 1){
+        int x =read (fd[2], &readBuf, sizeof(readBuf));
+        write(STDOUT_FILENO, "fuck", 4);
+    }
+
+    close(STDOUT_FILENO);
+    close(STDIN_FILENO);
+    close(fd[2*id]);
+
+
+
 
 
     return 0;
