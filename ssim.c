@@ -25,7 +25,7 @@ int main(void)
     }
   }
 
-  for(j = 0; j < i; j++)              /loop to create the children
+  for(j = 0; j < i; j++)              //loop to create the children
   {
     if( (parent = fork()) == -1)
     {
